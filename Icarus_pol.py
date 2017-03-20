@@ -292,7 +292,18 @@ ax3.grid(ls=':')
 
 
 #%%
+plt.clf()
+pi    = np.pi
+x_rad = np.arange(0.00001, pi, 0.01)
+def test(x, amplitude, beta, gamma):
+    a = 2*(pi)**(1-beta)
+    return -amplitude * sin(a * x**beta) * np.exp(gamma*x)
 
+beta=np.arange(0.5,0.6,0.01)
+for b in beta:
+    plt.plot(x_rad, test(x_rad, 1, b, 1. ))
+    plt.plot(x_rad, 2*test(x_rad, 1, b, 0.5), ls=':')
+plt.plot(x_rad, 2*test(x_rad, 1, 0.3, 1), ls='--')
 
-
-
+#%%
+cellino = np.loadtxt(prefix+'cellino.csv', dtype=bytes).astype(str)
