@@ -62,15 +62,15 @@ def pfunc(x, amplitude=1., spower=1., cpower=1., a_0=20.):
 
     x   = np.deg2rad(x)
     a_0 = np.deg2rad(a_0)
-    return 100*amplitude*(sin(x))**spower * (cos(0.5*x))**cpower * sin(x-a_0)
+    return 100 * amplitude * (sin(x))**spower * (cos(0.5*x))**cpower * sin(x-a_0)
 #          ^^^ 100 multiplied to give % unit
 
 #%%
 
 
-param_bounds = ([0,0,0,18],[1, 2, 2, 22])
-#                ^ ^ ^ ^
-#                amplitude, spower, cpower, and a_0, resp.
+param_bounds = ([0., 0.0, 0.0, 19],
+                [10, 2  , 2  , 21])
+# amplitude, spower, cpower, and a_0, resp.
 
 # Bounded
 popt_R, pcov_R = opt.curve_fit(pfunc, x_R, P_R, sigma=Perr_R,
@@ -82,26 +82,27 @@ popt_V, pcov_V = opt.curve_fit(pfunc, x_V, P_V, sigma=Perr_V,
 popt_uR, pcov_uR = opt.curve_fit(pfunc, x_R, P_R, sigma=Perr_R)
 popt_uV, pcov_uV = opt.curve_fit(pfunc, x_V, P_V, sigma=Perr_V)
 
-print(popt_R, popt_V)
-print(popt_uR, popt_uV)
-
-#%%
 plt.cla()
-plt.plot(x_R, pfunc(x_R, *popt_R),  'r', label='fit R' , ls='', marker='x', ms=10)
-plt.plot(x_V, pfunc(x_V, *popt_V),  'b', label='fit V' , ls='', marker='x', ms=10)
-plt.plot(x_R, pfunc(x_R, *popt_uR), 'r', label='fit uR', ls='', marker='o', ms=10, mfc='w', alpha=0.5)
-plt.plot(x_V, pfunc(x_V, *popt_uV), 'b', label='fit uV', ls='', marker='o', ms=10, mfc='w', alpha=0.5)
-plt.errorbar(x_R, P_R, yerr=Perr_R, color='r', ls='', capsize=3)
-plt.errorbar(x_V, P_V, yerr=Perr_V, color='b', ls='', capsize=3)
+x = np.linspace(0.01,179,180)
+plt.plot(x, pfunc(x, *popt_R),  'r', label='fit R' , ls='-')
+plt.plot(x, pfunc(x, *popt_V),  'b', label='fit V' , ls='-')
+plt.plot(x, pfunc(x, *popt_uR), 'r', label='fit uR', ls=':')
+plt.plot(x, pfunc(x, *popt_uV), 'b', label='fit uV', ls=':')
+plt.errorbar(x_R, P_R, yerr=Perr_R, color='r', ls='', marker='o', mfc='None', capsize=3, label='obs')
+plt.errorbar(x_V, P_V, yerr=Perr_V, color='b', ls='', marker='o', mfc='None', capsize=3)
 plt.xlabel('Phase angle ($^{\circ}$)')
 plt.ylabel("P (%)")
+plt.xlim(0,160)
+plt.ylim(-1,8)
+plt.grid(ls=':')
 plt.legend()
 
+print('bound  : ', popt_R, popt_V)
+print('unbound: ', popt_uR, popt_uV)
 
 
 #%%
 
-x       = np.linspace(0.01,179,180)
 Pmod_R  = pfunc(x, *popt_R)
 Pmod_uR = pfunc(x, *popt_uR)
 Pmod_V  = pfunc(x, *popt_V)
@@ -109,11 +110,18 @@ Pmod_uV = pfunc(x, *popt_uV)
 
 Pmax_R  = Pmod_R.max()
 Pmax_uR = Pmod_uR.max()
-amax_R  = np.where()
-Pmax_V  = pfunc(x, *popt_V).max()
-Pmax_uV = pfunc(x, *popt_uV).max()
+amax_R  = x[np.where(Pmod_R == Pmax_R)]
+amax_uR = x[np.where(Pmod_uR == Pmax_uR)]
 
+Pmax_V  = Pmod_V.max()
+Pmax_uV = Pmod_uV.max()
+amax_V  = x[np.where(Pmod_V == Pmax_V)]
+amax_uV = x[np.where(Pmod_uV == Pmax_uV)]
 
+print('bound R   : ', Pmax_R, amax_R)
+print('bound V   : ', Pmax_V, amax_V)
+print('unbound R : ', Pmax_uR, amax_uR)
+print('unbound V : ', Pmax_uV, amax_uV)
 
 
 
@@ -125,6 +133,35 @@ Pmax_uV = pfunc(x, *popt_uV).max()
 # From here: For testing only
 #==============================================================================
 
+def dPda0(x, spower, cpower, a_0):
+    '''
+    The LHS of ``dP/da = 0``.
+    The LHS is divided by ``amplitude*(sin(x))**(spower-1)*(cos(0.5*x))**(cpower-1).
+    '''
+    x   = np.deg2rad(x)
+    a_0 = np.deg2rad(a_0)
+    term1 = spower   * cos(x) * cos(x/2) * sin(x-a_0)
+    term2 = cpower/2 * sin(x) * sin(x/2) * sin(x-a_0)
+    term3 =            sin(x) * cos(x/2) * cos(x-a_0)
+    return term1 - term2 + term3
+
+
+for cpower in np.arange(0.01,2,0.1):
+    for spower in np.arange(0.01,2,0.1):
+        plt.plot(x, dPda0(x, spower, cpower, 20), 'r:', alpha=0.1)
+        plt.grid(ls=':')
+
+plt.plot(x, dPda0(x, 0.001, 0.001, 20), 'r', label='cpower=spower=e-3')
+plt.plot(x, dPda0(x, 0.001, 2, 20)    , 'g', label='cpower=e-3, spower=2')
+plt.plot(x, dPda0(x, 2, 0.001, 20)    , 'b', label='cpower=2, spower=e-3')
+plt.plot(x, dPda0(x, 2, 2, 20)        , 'k', label='cpower=spower=2')
+plt.axhline(y=0)
+plt.axvline(x=110)
+plt.xlabel('Phase angle ($(^{\circ}$))')
+plt.ylabel('dP/da')
+plt.legend()
+plt.show()
+#%%
 na, ns, nc = 20, 20, 20
 amplitude  = np.linspace(5. , 15. , na)
 spower     = np.linspace(0.01, 2  , ns)
