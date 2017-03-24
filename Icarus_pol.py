@@ -72,8 +72,8 @@ Perr_V= Vdata[:,2]
 #%%
 
 
-param_bounds = ([0., 0.0, 0.0, 19],
-                [10, 2  , 2  , 21])
+param_bounds = ([0., -3.0, -3.0, 15],
+                [1 ,  2  ,  2  , 30])
 # amplitude, spower, cpower, and a_0, resp.
 
 # Bounded
@@ -90,10 +90,12 @@ plt.cla()
 x = np.linspace(0.01,179,180)
 plt.plot(x, pfunc(x, *popt_R),  'r', label='fit R' , ls='-')
 plt.plot(x, pfunc(x, *popt_V),  'b', label='fit V' , ls='-')
-plt.plot(x, pfunc(x, *popt_uR), 'r', label='fit uR', ls=':')
-plt.plot(x, pfunc(x, *popt_uV), 'b', label='fit uV', ls=':')
-plt.errorbar(x_R, P_R, yerr=Perr_R, color='r', ls='', marker='o', mfc='None', capsize=3, label='obs')
-plt.errorbar(x_V, P_V, yerr=Perr_V, color='b', ls='', marker='o', mfc='None', capsize=3)
+plt.plot(x, pfunc(x, *popt_uR), 'r', label='fit R (unbound)', ls=':')
+plt.plot(x, pfunc(x, *popt_uV), 'b', label='fit V (unbound)', ls=':')
+plt.errorbar(x_R, P_R, yerr=Perr_R, color='r', ls='', marker='o', mfc='None', 
+             capsize=3, label='obs')
+plt.errorbar(x_V, P_V, yerr=Perr_V, color='b', ls='', marker='o', mfc='None', 
+             capsize=3)
 plt.xlabel('Phase angle ($^{\circ}$)')
 plt.ylabel("P (%)")
 plt.xlim(0,160)
@@ -101,8 +103,12 @@ plt.ylim(-1,8)
 plt.grid(ls=':')
 plt.legend()
 
-print('bound  : ', popt_R, popt_V)
-print('unbound: ', popt_uR, popt_uV)
+print('parameters-----amplitude    spower      cpower        a_0 ')
+print('R bound  : ', popt_R)
+print('V bound  : ', popt_V)
+print('-'*80)
+print('R unbound: ', popt_uR)
+print('V unbound: ', popt_uV)
 
 
 #%%
