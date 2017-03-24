@@ -14,23 +14,8 @@ import scipy.optimize as opt
 from astropy.modeling.fitting import LevMarLSQFitter
 from astropy.modeling.models import custom_model
 
+
 #%%
-
-# Load data
-prefix= 'testings/Icarus_pol/'
-Rdata = np.loadtxt(prefix+'R.dat', dtype=bytes).astype(str)
-Vdata = np.loadtxt(prefix+'V.dat', dtype=bytes).astype(str)
-Rdata = Rdata[:, [0,1,2]].astype(float)
-Vdata = Vdata[:, [0,1,2]].astype(float)
-
-x_R   = Rdata[:,0]
-P_R   = Rdata[:,1]
-Perr_R= Rdata[:,2]
-
-x_V   = Vdata[:,0]
-P_V   = Vdata[:,1]
-Perr_V= Vdata[:,2]
-
 # Define the function and its Jacobians
 def sin(x):
     return np.sin(x)
@@ -64,6 +49,25 @@ def pfunc(x, amplitude=1., spower=1., cpower=1., a_0=20.):
     a_0 = np.deg2rad(a_0)
     return 100 * amplitude * (sin(x))**spower * (cos(0.5*x))**cpower * sin(x-a_0)
 #          ^^^ 100 multiplied to give % unit
+
+
+#%%
+
+# Load data
+prefix= 'testings/Icarus_pol/'
+Rdata = np.loadtxt(prefix+'R.dat', dtype=bytes).astype(str)
+Vdata = np.loadtxt(prefix+'V.dat', dtype=bytes).astype(str)
+Rdata = Rdata[:, [0,1,2]].astype(float)
+Vdata = Vdata[:, [0,1,2]].astype(float)
+
+x_R   = Rdata[:,0]
+P_R   = Rdata[:,1]
+Perr_R= Rdata[:,2]
+
+x_V   = Vdata[:,0]
+P_V   = Vdata[:,1]
+Perr_V= Vdata[:,2]
+
 
 #%%
 
@@ -130,7 +134,7 @@ print('unbound V : ', Pmax_uV, amax_uV)
 
 #%%
 #==============================================================================
-# From here: For testing only
+# Testing: Plotting dP/da
 #==============================================================================
 
 def dPda0(x, spower, cpower, a_0):
@@ -145,22 +149,38 @@ def dPda0(x, spower, cpower, a_0):
     term3 =            sin(x) * cos(x/2) * cos(x-a_0)
     return term1 - term2 + term3
 
+x     = np.linspace(0.01,180,180)
 
-for cpower in np.arange(0.01,2,0.1):
-    for spower in np.arange(0.01,2,0.1):
-        plt.plot(x, dPda0(x, spower, cpower, 20), 'r:', alpha=0.1)
+
+for cpower in np.arange(0.01,2,0.2):
+    for spower in np.arange(0.01,2,0.2):
+        plt.plot(x, dPda0(x, spower, cpower, 20), 'r:', alpha=0.3)
+        plt.plot(x, dPda0(x, spower, cpower, 18), 'b:', alpha=0.3)
+        plt.plot(x, dPda0(x, spower, cpower, 22), 'g:', alpha=0.3)
         plt.grid(ls=':')
 
-plt.plot(x, dPda0(x, 0.001, 0.001, 20), 'r', label='cpower=spower=e-3')
-plt.plot(x, dPda0(x, 0.001, 2, 20)    , 'g', label='cpower=e-3, spower=2')
-plt.plot(x, dPda0(x, 2, 0.001, 20)    , 'b', label='cpower=2, spower=e-3')
-plt.plot(x, dPda0(x, 2, 2, 20)        , 'k', label='cpower=spower=2')
+plt.plot(x, dPda0(x, 0.001, 0.001, 20), 'r', lw=4, label='cpower~0, spower~0')
+plt.plot(x, dPda0(x, 0.001, 2, 20)    , 'g', lw=4, label='cpower~0, spower=2')
+plt.plot(x, dPda0(x, 2, 0.001, 20)    , 'b', lw=4, label='cpower=2, spower~0')
+plt.plot(x, dPda0(x, 2, 2, 20)        , 'k', lw=4, label='cpower=2, spower=2')
+plt.text(0, -0.8 , 'a_0=18$^{\circ}$ (blue dot)' , color='blue')
+plt.text(0, -0.95, 'a_0=20$^{\circ}$ (red dot)'  , color='red')
+plt.text(0, -1.1 , 'a_0=22$^{\circ}$ (green dot)', color='green')
+
+plt.text(15, -0.5, r'$P(\alpha) \propto (\sin \alpha)^{\rm spower} \
+         (\cos \frac{\alpha}{2})^{\rm cpower} \sin (\alpha - \alpha_0)$',
+         bbox={'facecolor':'red', 'alpha':0.5, 'pad':10})
 plt.axhline(y=0)
 plt.axvline(x=110)
-plt.xlabel('Phase angle ($(^{\circ}$))')
-plt.ylabel('dP/da')
+plt.title(r'Plot of $ \frac{dP( \alpha )}{d \alpha}$: $P_{min}$ and $P_{max}$',
+          y=1.01)
+plt.xlabel('Phase angle ($^{\circ}$)')
+plt.ylabel('dP/da (arbitrary unit)')
 plt.legend()
+
 plt.show()
+
+
 #%%
 na, ns, nc = 20, 20, 20
 amplitude  = np.linspace(5. , 15. , na)
