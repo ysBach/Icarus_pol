@@ -5,6 +5,9 @@ Created on Sat Mar 18 22:12:02 2017
 
 @author: aaa
 """
+#==============================================================================
+# Import modules
+#==============================================================================
 from __future__ import (absolute_import, unicode_literals, division,
                         print_function)
 
@@ -16,7 +19,9 @@ from astropy.modeling.models import custom_model
 
 
 #%%
-# Define the function and its Jacobians
+#==============================================================================
+# Define the functions
+#==============================================================================
 def sin(x):
     return np.sin(x)
 
@@ -52,9 +57,10 @@ def pfunc(x, amplitude=1., spower=1., cpower=1., a_0=20.):
 
 
 #%%
-
+#==============================================================================
 # Load data
-prefix= 'testings/Icarus_pol/'
+#==============================================================================
+prefix= './'
 Rdata = np.loadtxt(prefix+'R.dat', dtype=bytes).astype(str)
 Vdata = np.loadtxt(prefix+'V.dat', dtype=bytes).astype(str)
 Rdata = Rdata[:, [0,1,2]].astype(float)
@@ -70,9 +76,11 @@ Perr_V= Vdata[:,2]
 
 
 #%%
+#==============================================================================
+# Get the best fit for future use
+#==============================================================================
 
-
-param_bounds = ([0., -3.0, -3.0, 15],
+param_bounds = ([0., -3.0, -3.0, 20],
                 [1 ,  2  ,  2  , 30])
 # amplitude, spower, cpower, and a_0, resp.
 
@@ -87,31 +95,22 @@ popt_uR, pcov_uR = opt.curve_fit(pfunc, x_R, P_R, sigma=Perr_R)
 popt_uV, pcov_uV = opt.curve_fit(pfunc, x_V, P_V, sigma=Perr_V)
 
 plt.cla()
-x = np.linspace(0.01,179,180)
+x = np.linspace(0.01,179,4*180)
 plt.plot(x, pfunc(x, *popt_R),  'r', label='fit R' , ls='-')
 plt.plot(x, pfunc(x, *popt_V),  'b', label='fit V' , ls='-')
 plt.plot(x, pfunc(x, *popt_uR), 'r', label='fit R (unbound)', ls=':')
 plt.plot(x, pfunc(x, *popt_uV), 'b', label='fit V (unbound)', ls=':')
-plt.errorbar(x_R, P_R, yerr=Perr_R, color='r', ls='', marker='o', mfc='None', 
+plt.errorbar(x_R, P_R, yerr=Perr_R, color='r', ls='', marker='o', mfc='None',
              capsize=3, label='obs')
-plt.errorbar(x_V, P_V, yerr=Perr_V, color='b', ls='', marker='o', mfc='None', 
+plt.errorbar(x_V, P_V, yerr=Perr_V, color='b', ls='', marker='o', mfc='None',
              capsize=3)
 plt.xlabel('Phase angle ($^{\circ}$)')
 plt.ylabel("P (%)")
-plt.xlim(0,160)
+plt.xlim(0,180)
 plt.ylim(-1,8)
 plt.grid(ls=':')
 plt.legend()
 
-print('parameters-----amplitude    spower      cpower        a_0 ')
-print('R bound  : ', popt_R)
-print('V bound  : ', popt_V)
-print('-'*80)
-print('R unbound: ', popt_uR)
-print('V unbound: ', popt_uV)
-
-
-#%%
 
 Pmod_R  = pfunc(x, *popt_R)
 Pmod_uR = pfunc(x, *popt_uR)
@@ -128,13 +127,99 @@ Pmax_uV = Pmod_uV.max()
 amax_V  = x[np.where(Pmod_V == Pmax_V)]
 amax_uV = x[np.where(Pmod_uV == Pmax_uV)]
 
-print('bound R   : ', Pmax_R, amax_R)
-print('bound V   : ', Pmax_V, amax_V)
-print('unbound R : ', Pmax_uR, amax_uR)
-print('unbound V : ', Pmax_uV, amax_uV)
+print('parameters-----amplitude    spower      cpower        a_0 ')
+print('R bound  : ', popt_R)
+print('V bound  : ', popt_V)
+print('-'*80)
+print('R unbound: ', popt_uR)
+print('V unbound: ', popt_uV)
+print('-'*80)
+print('            P_max | alpha_max')
+print('bound R   : {0:.4f}| {1:.1f}'.format(Pmax_R, amax_R[0]))
+print('bound V   : {0:.4f}| {1:.1f}'.format(Pmax_V, amax_V[0]))
+print('unbound R : {0:.4f}| {1:.1f}'.format(Pmax_uR, amax_uR[0]))
+print('unbound V : {0:.4f}| {1:.1f}'.format(Pmax_uV, amax_uV[0]))
+
+#%%
+#==============================================================================
+# Fix a_0 value to 20 deg. Get marginalized error of Pmax and amax.
+#==============================================================================
+
+x = np.linspace(0.01,160,4*160)
+# I calculated upto ~160 deg, since negative cpower gives maximum at 180 deg.
+
+b0_R, s0_R, c0_R, a0_R = popt_R
+b0_V, s0_V, c0_V, a0_V = popt_V
+
+b_R = np.arange(0.8*b0_R, 1.2*b0_R, 0.01*b0_R)
+s_R = np.arange(0.4*s0_R, 1.6*s0_R, 0.01*s0_R)
+c_R = np.arange(0.7*c0_R, 1.3*c0_R, 0.01*c0_R)
+
+b_V = np.arange(0.8*b0_V, 1.2*b0_V, 0.01*b0_V)
+s_V = np.arange(0.4*s0_V, 1.6*s0_V, 0.01*s0_V)
+c_V = np.arange(0.7*c0_V, 1.3*c0_V, 0.01*c0_V)
+
+#chisq_R  = np.zeros((len(b_R), len(s_R), len(c_R)))
+#Pmax_R   = np.zeros((len(b_R), len(s_R), len(c_R)))
+#amax_R   = np.zeros((len(b_R), len(s_R), len(c_R)))
+#chisq_V  = np.zeros((len(b_V), len(s_V), len(c_V)))
+dof_R    = len(P_R)-3
+dof_V    = len(P_V)-3
+chimax_R = 1 + np.sqrt(2/dof_R)
+chimax_V = 1 + np.sqrt(2/dof_V)
+
+for bb in range(0, len(b_R)):
+    for ss in range(0, len(s_R)):
+        for cc in range(0, len(c_R)):
+            model = pfunc(x_R, b_R[bb], s_R[ss], c_R[cc], a0_R)
+            chisq = np.sum( ((P_R-model)/Perr_R)**2 )/dof_R
+#            chisq_R[bb, ss, cc] = chisq
+            if chisq < chimax_R:
+                model  = pfunc(x, b_R[bb], s_R[ss], c_R[cc], a0_R)
+                with open('Pmax_R.txt', 'a') as f:
+                    Pmax = model.max()
+                    amax = x[np.where(model == model.max())]
+                    f.write('{0:d} {1:d} {2:d} {3:.4f} {4:.4f}\n'.format(bb, ss, cc, Pmax, amax[0]))
+                    if amax>150:
+                        plt.plot(x, model)
+#    print(bb)
+#                Pmax_R[bb,ss,cc] = model.max()
+#                amax_R[bb,ss,cc] = x[np.where(model == model.max())]
 
 
 
+for bb in range(0, len(b_V)):
+    for ss in range(0, len(s_V)):
+        for cc in range(0, len(c_V)):
+            model = pfunc(x_V, b_V[bb], s_V[ss], c_V[cc], a0_V)
+            chisq = np.sum( ((P_V-model)/Perr_V)**2 )/dof_V
+#            chisq_R[bb, ss, cc] = chisq
+            if chisq < chimax_V:
+                model  = pfunc(x, b_V[bb], s_V[ss], c_V[cc], a0_V)
+                with open('Pmax_V.txt', 'a') as f:
+                    Pmax = model.max()
+                    amax = x[np.where(model == model.max())]
+                    f.write('{0:d} {1:d} {2:d} {3:.4f} {4:.4f}\n'.format(bb, ss, cc, Pmax, amax[0]))
+
+
+
+#%%
+
+calc_R = np.loadtxt('Pmax_R.txt')
+calc_V = np.loadtxt('Pmax_V.txt')
+
+print('R amp bin: {0:f}--{1:f}'.format(calc_R[:,0].min(), calc_R[:,0].max()))
+print('R sin bin: {0:f}--{1:f}'.format(calc_R[:,1].min(), calc_R[:,1].max()))
+print('R cos bin: {0:f}--{1:f}'.format(calc_R[:,2].min(), calc_R[:,2].max()))
+print('V amp bin: {0:f}--{1:f}'.format(calc_V[:,0].min(), calc_V[:,0].max()))
+print('V sin bin: {0:f}--{1:f}'.format(calc_V[:,1].min(), calc_V[:,1].max()))
+print('V cos bin: {0:f}--{1:f}'.format(calc_V[:,2].min(), calc_V[:,2].max()))
+
+
+#plt.plot(calc_R[:,0], 'o')
+#plt.plot(calc_R[:,1], 'o')
+#plt.plot(calc_V[:,0], 'o')
+#plt.plot(calc_V[:,1], 'o')
 
 
 
@@ -155,7 +240,8 @@ def dPda0(x, spower, cpower, a_0):
     term3 =            sin(x) * cos(x/2) * cos(x-a_0)
     return term1 - term2 + term3
 
-x     = np.linspace(0.01,180,180)
+plt.clf()
+x = np.linspace(0.01,180,180)
 
 
 for cpower in np.arange(0.01,2,0.2):
@@ -186,17 +272,6 @@ plt.legend()
 
 plt.show()
 
-
-#%%
-na, ns, nc = 20, 20, 20
-amplitude  = np.linspace(5. , 15. , na)
-spower     = np.linspace(0.01, 2  , ns)
-cpower     = np.linspace(0.01, 2  , nc)
-#aa, ss, cc = np.meshgrid(amplitude, spower, cpower)
-chisq_R    = np.zeros((na, ns, nc)) # Reduced chi-square
-chisq_V    = np.zeros((na, ns, nc)) # Reduced chi-square
-dof_R      = len(P_R) - 3
-dof_V      = len(P_V) - 3
 
 #%%
 
